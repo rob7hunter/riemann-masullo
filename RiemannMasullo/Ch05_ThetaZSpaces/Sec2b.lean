@@ -225,33 +225,35 @@ private theorem normOneCharacterUnramifiedOutside_iff_reinsert (c : unramifiedOu
       c.val (QuotientGroup.mk (sIdeleInsertion F S
         (Units.map (adeleProjection F S).toMonoidHom (integralIdeleInsertion F S u)))) := by
   classical
-  let fin : (∀ v : HeightOneSpectrum (𝓞 F), (HeightOneSpectrum.adicCompletionIntegers F v)ˣ) →ₜ* IdeleClassGroup (𝓞 F) F :=
-    let f : (∀ v : HeightOneSpectrum (𝓞 F), (HeightOneSpectrum.adicCompletionIntegers F v)) →* AdeleRing (𝓞 F) F :=
+  let fin : (∀ v : HeightOneSpectrum (𝓞 F), (v.adicCompletionIntegers F)ˣ) →ₜ*
+      IdeleClassGroup (𝓞 F) F :=
+    let f : (∀ v : HeightOneSpectrum (𝓞 F), (v.adicCompletionIntegers F)) →* AdeleRing (𝓞 F) F :=
       (1 : _ →* InfiniteAdeleRing F).prod
         { toFun := RestrictedProduct.structureMap
             (fun v : HeightOneSpectrum (𝓞 F) => v.adicCompletion F)
-            (fun v => ((HeightOneSpectrum.adicCompletionIntegers F v) : Set (v.adicCompletion F))) Filter.cofinite
+            (fun v => ((v.adicCompletionIntegers F) : Set (v.adicCompletion F))) Filter.cofinite
           map_one' := rfl
           map_mul' := fun _ _ => rfl }
     ⟨(QuotientGroup.mk' _).comp ((Units.map f).comp
       (ContinuousMulEquiv.piUnits.symm :
-        (∀ v : HeightOneSpectrum (𝓞 F), (HeightOneSpectrum.adicCompletionIntegers F v)ˣ) ≃ₜ* _).toMonoidHom),
+        (∀ v : HeightOneSpectrum (𝓞 F), (v.adicCompletionIntegers F)ˣ) ≃ₜ* _).toMonoidHom),
       QuotientGroup.continuous_mk.comp
         ((continuous_const.prodMk RestrictedProduct.isEmbedding_structureMap.continuous).units_map f
           |>.comp (ContinuousMulEquiv.piUnits.symm :
-            (∀ v : HeightOneSpectrum (𝓞 F), (HeightOneSpectrum.adicCompletionIntegers F v)ˣ) ≃ₜ* _).continuous)⟩
-  have hsingle (v : HeightOneSpectrum (𝓞 F)) (w : (HeightOneSpectrum.adicCompletionIntegers F v)ˣ) :
+            (∀ v : HeightOneSpectrum (𝓞 F), (v.adicCompletionIntegers F)ˣ) ≃ₜ* _).continuous)⟩
+  have hsingle (v : HeightOneSpectrum (𝓞 F)) (w : (v.adicCompletionIntegers F)ˣ) :
       fin (Pi.mulSingle v w) =
         IdeleClassGroup.ofAdicCompletion (𝓞 F) F v
-          (Units.map ((HeightOneSpectrum.adicCompletionIntegers F v)).subtype.toMonoidHom w) := by
+          (Units.map (v.adicCompletionIntegers F).subtype.toMonoidHom w) := by
     apply congrArg (QuotientGroup.mk : IdeleGroup (𝓞 F) F → IdeleClassGroup (𝓞 F) F)
     apply Units.ext
     refine Prod.ext rfl ?_
     apply RestrictedProduct.ext
     intro w'
-    change (((Pi.mulSingle v w : ∀ w : HeightOneSpectrum (𝓞 F), (HeightOneSpectrum.adicCompletionIntegers F w)ˣ) w').val :
+    change (((Pi.mulSingle v w : ∀ w : HeightOneSpectrum (𝓞 F),
+        (w.adicCompletionIntegers F)ˣ) w').val :
         w'.adicCompletion F) =
-      RestrictedProduct.mulSingle (fun w : HeightOneSpectrum (𝓞 F) => (HeightOneSpectrum.adicCompletionIntegers F w)) v
+      RestrictedProduct.mulSingle (fun w : HeightOneSpectrum (𝓞 F) => w.adicCompletionIntegers F) v
         (w.val : v.adicCompletion F) w'
     rcases eq_or_ne w' v with rfl | hw
     · rw [Pi.mulSingle_eq_same]
@@ -263,13 +265,13 @@ private theorem normOneCharacterUnramifiedOutside_iff_reinsert (c : unramifiedOu
   let s := Units.map ((adeleProjection F S).comp i).toMonoidHom u
   let q := QuotientGroup.mk' (IdeleGroup.principalSubgroup (𝓞 F) F)
   let localEval (v : HeightOneSpectrum (𝓞 F)) (hv : v ∉ S) :
-      integralAdelesOutside F S →+* (HeightOneSpectrum.adicCompletionIntegers F v) :=
+      integralAdelesOutside F S →+* (v.adicCompletionIntegers F) :=
     (((RestrictedProduct.evalRingHom _ v).comp (RingHom.snd _ _)).comp i).codRestrict _
       (fun x => by
         have hx := x.property
         simp only [integralAdelesOutside, Subring.mem_iInf] at hx
         exact hx v hv)
-  let outsideUnits (v : HeightOneSpectrum (𝓞 F)) : (HeightOneSpectrum.adicCompletionIntegers F v)ˣ :=
+  let outsideUnits (v : HeightOneSpectrum (𝓞 F)) : (v.adicCompletionIntegers F)ˣ :=
     if hv : v ∈ S then 1 else Units.map (localEval v hv).toMonoidHom u
   have hb : c.val (fin outsideUnits) = 1 := by
     let χ := c.val.comp fin
@@ -288,7 +290,7 @@ private theorem normOneCharacterUnramifiedOutside_iff_reinsert (c : unramifiedOu
       have hc : ∀ v ∉ S, c.val.IsUnramifiedAt v := c.property
       have h := (hc v hv).restrict_apply_unit_eq_one (outsideUnits v)
       change c.val.restrict v
-        ↑(Units.map ((HeightOneSpectrum.adicCompletionIntegers F v)).subtype.toMonoidHom (outsideUnits v)) = 1 at h
+        ↑(Units.map (v.adicCompletionIntegers F).subtype.toMonoidHom (outsideUnits v)) = 1 at h
       rw [HeckeCharacter.restrict, MulChar.ofUnitHom_coe] at h
       exact h
   have hfactor : q a = q (sIdeleInsertion F S s) * fin outsideUnits := by
@@ -404,31 +406,31 @@ theorem normOneCharacterUnramifiedOutside_iff (ω : PontryaginDual C₁) :
       rw [mem_unramifiedOutside_iff]
       intro v hv w
       let gi := IdeleGroup.ofAdicCompletion (𝓞 F) F v
-        (Units.map ((HeightOneSpectrum.adicCompletionIntegers F v)).subtype.toMonoidHom w)
+        (Units.map (v.adicCompletionIntegers F).subtype.toMonoidHom w)
       have hnorm : m𝔽 (QuotientGroup.mk gi) = 1 := by
         change m𝔽 (IdeleClassGroup.ofAdicCompletion (𝓞 F) F v _) = 1
         rw [ideleClassNorm_ofAdicCompletion]
         apply Units.ext
-        change ‖((w : (HeightOneSpectrum.adicCompletionIntegers F v)) : v.adicCompletion F)‖₊ = 1
-        have h1 : ‖((w : (HeightOneSpectrum.adicCompletionIntegers F v)) : v.adicCompletion F)‖ ≤ 1 :=
-          Valued.toNormedField.norm_le_one_iff.mpr (w : (HeightOneSpectrum.adicCompletionIntegers F v)).property
-        have h2 : ‖(((w⁻¹ : (HeightOneSpectrum.adicCompletionIntegers F v)ˣ) : (HeightOneSpectrum.adicCompletionIntegers F v)) : v.adicCompletion F)‖ ≤ 1 :=
-          Valued.toNormedField.norm_le_one_iff.mpr ((w⁻¹ : (HeightOneSpectrum.adicCompletionIntegers F v)ˣ) : (HeightOneSpectrum.adicCompletionIntegers F v)).property
-        have h3 : ‖((w : (HeightOneSpectrum.adicCompletionIntegers F v)) : v.adicCompletion F)‖ *
-            ‖(((w⁻¹ : (HeightOneSpectrum.adicCompletionIntegers F v)ˣ) : (HeightOneSpectrum.adicCompletionIntegers F v)) : v.adicCompletion F)‖ = 1 := by
-          rw [← norm_mul]
-          have := congrArg Subtype.val w.mul_inv
-          simp only [MulMemClass.coe_mul, OneMemClass.coe_one] at this
-          rw [this, norm_one]
+        change ‖((w : (v.adicCompletionIntegers F)) : v.adicCompletion F)‖₊ = 1
+        let a : v.adicCompletionIntegers F := w
+        let b : v.adicCompletionIntegers F := ((w⁻¹ : (v.adicCompletionIntegers F)ˣ) :
+          v.adicCompletionIntegers F)
+        have h1 : ‖(a : v.adicCompletion F)‖ ≤ 1 :=
+          Valued.toNormedField.norm_le_one_iff.mpr a.property
+        have h2 : ‖(b : v.adicCompletion F)‖ ≤ 1 :=
+          Valued.toNormedField.norm_le_one_iff.mpr b.property
+        have h3 : ‖(a : v.adicCompletion F)‖ * ‖(b : v.adicCompletion F)‖ = 1 := by
+          rw [← norm_mul, ← MulMemClass.coe_mul]
+          simp only [a, b, Units.mul_inv, OneMemClass.coe_one, norm_one]
         apply NNReal.coe_injective
         simp only [coe_nnNorm, NNReal.coe_one]
-        nlinarith [norm_nonneg ((w : (HeightOneSpectrum.adicCompletionIntegers F v)) : v.adicCompletion F),
-          norm_nonneg (((w⁻¹ : (HeightOneSpectrum.adicCompletionIntegers F v)ˣ) : (HeightOneSpectrum.adicCompletionIntegers F v)) : v.adicCompletion F)]
+        nlinarith [norm_nonneg (a : v.adicCompletion F), norm_nonneg (b : v.adicCompletion F)]
       obtain ⟨u, hu⟩ : gi ∈ Set.range (integralIdeleInsertion F S) := by
         rw [mem_range_integralIdeleInsertion]
         intro v' hv'
-        have hc (z : (v.adicCompletion F)ˣ) (hz : (z : v.adicCompletion F) ∈ (HeightOneSpectrum.adicCompletionIntegers F v)) :
-            (IdeleGroup.ofAdicCompletion (𝓞 F) F v z).val.2 v' ∈ (HeightOneSpectrum.adicCompletionIntegers F v') := by
+        have hc (z : (v.adicCompletion F)ˣ)
+            (hz : (z : v.adicCompletion F) ∈ v.adicCompletionIntegers F) :
+            (IdeleGroup.ofAdicCompletion (𝓞 F) F v z).val.2 v' ∈ (v'.adicCompletionIntegers F) := by
           change RestrictedProduct.mulSingle (fun w : HeightOneSpectrum (𝓞 F) ↦
             w.adicCompletionIntegers F) v z.val v' ∈ _
           rcases eq_or_ne v' v with rfl | hne
@@ -438,7 +440,8 @@ theorem normOneCharacterUnramifiedOutside_iff (ω : PontryaginDual C₁) :
             exact one_mem _
         refine ⟨hc _ w.val.property, ?_⟩
         rw [Units.inv_eq_val_inv, show gi⁻¹ = IdeleGroup.ofAdicCompletion (𝓞 F) F v
-          (Units.map ((HeightOneSpectrum.adicCompletionIntegers F v)).subtype.toMonoidHom w⁻¹) by simp only [gi, map_inv]]
+          (Units.map (v.adicCompletionIntegers F).subtype.toMonoidHom w⁻¹) by
+            simp only [gi, map_inv]]
         exact hc _ (w⁻¹).val.property
       have hproj : Units.map (adeleProjection F S).toMonoidHom gi = 1 := by
         apply Units.ext
@@ -2669,7 +2672,8 @@ private theorem existsUnique_globalThetaFourier_inv (f : ℬ𝔽) :
       adelicTheta f g = adelicTheta (adeleSchwartzFourier (adeleSchwartzFourier f)) g + c - a := by
     have h1 := adelicTheta_riemannRoch f g
     have h2 := adelicTheta_riemannRoch (adeleSchwartzFourier f) g⁻¹
-    have hn : ((ideleClassNorm F g : ℝ≥0) : ℝ) ≠ 0 := NNReal.coe_ne_zero.mpr (ideleClassNorm F g).ne_zero
+    have hn : ((ideleClassNorm F g : ℝ≥0) : ℝ) ≠ 0 :=
+      NNReal.coe_ne_zero.mpr (ideleClassNorm F g).ne_zero
     simp only [inv_inv, map_inv, Units.val_inv_eq_inv_val, NNReal.coe_inv,
       Complex.real_smul] at h1 h2
     rw [h1, h2]
@@ -2707,7 +2711,8 @@ theorem existsUnique_globalThetaFourier :
     rfl
   have hcont : Continuous E₀ := by
     refine (K𝔽).isQuotientMap_mkQ.continuous_iff.mpr ?_
-    have : (E₀ ∘ (K𝔽).mkQ) = (K𝔽).mkQ ∘ P := funext fun f ↦ (hE₀ f).trans (by simp only [Function.comp_apply, hP])
+    have : (E₀ ∘ (K𝔽).mkQ) = (K𝔽).mkQ ∘ P :=
+      funext fun f ↦ (hE₀ f).trans (by simp only [Function.comp_apply, hP])
     rw [this]
     exact (K𝔽).isQuotientMap_mkQ.continuous.comp P.continuous
   let E : Θ𝔽 →L[ℂ] Θ𝔽 := ⟨E₀, hcont⟩
