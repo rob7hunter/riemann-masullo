@@ -1622,7 +1622,30 @@ theorem globalHomogeneousThetaSpace_complete :
 /-- Paper: Theorem 5.2.3.1(2), p. 233.
 The S-local homogeneous quotient is complete for its additive uniformity. -/
 theorem sLocalHomogeneousThetaSpace_complete (χ : PontryaginDual (J₁(S))) :
-    @CompleteSpace (Θₛω(S, χ)) (IsTopologicalAddGroup.rightUniformSpace _) := by sorry
+    @CompleteSpace (Θₛω(S, χ)) (IsTopologicalAddGroup.rightUniformSpace _) := by
+  let E := SLocalAdelicThetaSpace F S
+  let G := J₁(S)
+  have := isClosed_sProjectedDiagonal (F := F) (S := S)
+  let : T2Space (Jₛ(S)) := inferInstanceAs (T2Space (_ ⧸ _))
+  let : T2Space G := inferInstanceAs (T2Space ((sIdeleQuotientNorm F S).ker : Set (Jₛ(S))))
+  let : MeasurableSpace G := borel _
+  let : BorelSpace G := ⟨rfl⟩
+  let : CompactSpace G := isCompact_iff_compactSpace.mp
+    ((isProperMap_sIdeleQuotientNorm F S).isCompact_preimage (isCompact_singleton (x := 1)))
+  let : T2Space E := sLocalAdelicThetaSpace_t2_of_isClosed (F := F) (S := S)
+    (sLocalAdelicTheta_ker_isClosed (F := F) (S := S))
+  let : PolynormableSpace ℂ E := sLocalAdelicThetaSpace_polynormable (F := F) (S := S)
+  let μ := sLocalNormOneQuotientMeasure F S
+  have : μ.IsHaarMeasure := (sLocalNormOneQuotientMeasure_normProduct (F := F) (S := S)).1
+  let ρ := (existsUnique_sLocalThetaAction (F := F) (S := S)).exists.choose
+  have hσ : Continuous (fun p : G × E ↦ ρ p.1.val p.2) :=
+    (existsUnique_sLocalThetaAction (F := F) (S := S)).exists.choose_spec.1.comp
+      ((continuous_subtype_val.comp continuous_fst).prodMk continuous_snd)
+  have hq := globalHomogeneousThetaSpace_complete_subgroup G
+    (sLocalAdelicThetaSpace_complete (F := F) (S := S)) μ ρ hσ χ
+  have he := (sLocalHomogeneousThetaSpace_equiv_coinvariants (F := F) (S := S) χ).choose
+  with_reducible_and_instances
+    exact globalHomogeneousThetaSpace_complete_transfer he hq
 
 /-- Paper: Theorem 5.2.3.1(2), p. 233.
 The global homogeneous quotient is nuclear. -/
