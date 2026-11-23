@@ -2301,6 +2301,167 @@ theorem existsUnique_sLocalThetaFourier :
         e ((Kₛ(S)).mkQ f) = (Kₛ(S)).mkQ (sAdeleSchwartzFourier (F := F) (S := S) f) :=
   by sorry
 
+open scoped IsDedekindDomain.FiniteAdeleRing RestrictedProduct in
+/-- The adelic Fourier transform is a continuous linear operator on the global tests. It is
+linear because it is the Pontryagin-dual transform read through self-duality, and continuous
+because it maps bounded sets to bounded sets. -/
+private theorem existsUnique_globalThetaFourier_clm :
+    ∃ P : ℬ𝔽 →L[ℂ] ℬ𝔽, ∀ f, P f = adeleSchwartzFourier f := by
+  let : MeasurableSpace 𝔸[F] := borel _
+  let G := Multiplicative 𝔸[F]
+  let : MeasurableSpace G := borel G
+  let μ : Measure G := additiveTamagawaMeasure F
+  let (v : HeightOneSpectrum (𝓞 F)) : LocallyCompactSpace (v.adicCompletion F) :=
+    locallyCompactSpace_adicCompletion v
+  let (v : HeightOneSpectrum (𝓞 F)) : CompactSpace (v.adicCompletionIntegers F) :=
+    compactSpace_adicCompletionIntegers v
+  let : Fact (∀ v : HeightOneSpectrum (𝓞 F),
+      IsOpen (v.adicCompletionIntegers F : Set (v.adicCompletion F))) :=
+    ⟨fun _ ↦ Valued.isOpen_valuationSubring _⟩
+  let : LocallyCompactSpace G := by
+    change LocallyCompactSpace (InfiniteAdeleRing F ×
+      (Πʳ v : HeightOneSpectrum (𝓞 F), [v.adicCompletion F, v.adicCompletionIntegers F]))
+    infer_instance
+  let : T2Space G := by
+    change T2Space (((v : InfinitePlace F) → v.Completion) ×
+      (Πʳ v : HeightOneSpectrum (𝓞 F), [v.adicCompletion F, v.adicCompletionIntegers F]))
+    infer_instance
+  let : BorelSpace G := ⟨rfl⟩
+  have hμ := (additiveTamagawaMeasure_existsUnique F).exists.choose_spec
+  let : μ.IsHaarMeasure :=
+    { toIsFiniteMeasureOnCompacts := hμ.1.toIsFiniteMeasureOnCompacts
+      toIsOpenPosMeasure := hμ.1.toIsOpenPosMeasure
+      map_mul_left_eq_self := fun x ↦ hμ.1.map_add_left_eq_self x.toAdd }
+  let : μ.Regular := hμ.2.1
+  obtain ⟨e, he⟩ := additiveTamagawaMeasure_selfDual F
+  obtain ⟨Fo, hFo⟩ := schwartzBruhat_fourier_equiv μ
+  have hpt (f : ℬ𝔽) (y : G) : adeleSchwartzFourier f y = Fo f (e y) := by
+    refine (tamagawaFourier_eq_lcaFourier _ _ _ _ (e y) (fun x ↦ ?_)).trans ((hFo f).2 _).symm
+    rw [mul_comm x y.toAdd]
+    exact he.1 y.toAdd x
+  let L : ℬ𝔽 →ₗ[ℂ] ℬ𝔽 :=
+    { toFun := adeleSchwartzFourier
+      map_add' := fun f g ↦ Subtype.ext (funext fun y ↦ by
+        change adeleSchwartzFourier (f + g) y =
+          adeleSchwartzFourier f y + adeleSchwartzFourier g y
+        rw [hpt, hpt, hpt, map_add]
+        rfl)
+      map_smul' := fun c f ↦ Subtype.ext (funext fun y ↦ by
+        change adeleSchwartzFourier (c • f) y = c * adeleSchwartzFourier f y
+        rw [hpt, hpt, map_smul]
+        rfl) }
+  exact ⟨⟨L, continuous_of_bornological_image schwartzBruhat_bornological L
+    adeleSchwartzFourier_image_isVonNBounded⟩, fun _ ↦ rfl⟩
+
+/-- There are idele classes of every norm `n + 1`. -/
+private theorem existsUnique_globalThetaFourier_seq :
+    ∃ g : ℕ → IdeleClassGroup (𝓞 F) F,
+      ∀ n, ((ideleClassNorm F (g n) : ℝ≥0) : ℝ) = n + 1 := by
+  refine ⟨fun n ↦ QuotientGroup.mk (canonicalIdeleNormSection F
+    (Units.mk0 ((n : ℝ≥0) + 1) (Nat.cast_add_one_ne_zero n))), fun n ↦ ?_⟩
+  change ((ideleNorm F (canonicalIdeleNormSection F _) : ℝ≥0) : ℝ) = _
+  rw [canonicalIdeleNormSection_rightInverse F]
+  simp
+
+/-- Global theta decays faster than the inverse norm along classes of norm `n + 1`. -/
+private theorem existsUnique_globalThetaFourier_tendsto (h : ℬ𝔽)
+    (g : ℕ → IdeleClassGroup (𝓞 F) F) (hg : ∀ n, ((ideleClassNorm F (g n) : ℝ≥0) : ℝ) = n + 1) :
+    Tendsto (fun n : ℕ ↦ ((n : ℂ) + 1) * adelicTheta h (g n)) atTop (𝓝 0) := by
+  obtain ⟨C, T, hC, -, hdec⟩ := adelicTheta_decay_large h 2
+  refine squeeze_zero_norm' ?_ (tendsto_const_div_atTop_nhds_zero_nat C)
+  filter_upwards [eventually_gt_atTop ⌈T⌉₊, eventually_ge_atTop 1] with n hn hn1
+  have hT : T < ((ideleClassNorm F (g n) : ℝ≥0) : ℝ) := by
+    rw [hg]
+    have := Nat.lt_of_ceil_lt hn
+    linarith
+  have hb := hdec (g n) hT
+  simp only [hg] at hb
+  have hpos : (0 : ℝ) < n := by exact_mod_cast hn1
+  rw [norm_mul, show ((n : ℂ) + 1) = ((n + 1 : ℝ) : ℂ) by push_cast; ring, Complex.norm_real,
+    Real.norm_of_nonneg (by positivity)]
+  calc ((n : ℝ) + 1) * ‖adelicTheta h (g n)‖ ≤ ((n : ℝ) + 1) * (C * (((n : ℝ) + 1) ^ 2)⁻¹) :=
+        mul_le_mul_of_nonneg_left hb (by positivity)
+    _ = C / ((n : ℝ) + 1) := by field_simp
+    _ ≤ C / n := div_le_div_of_nonneg_left hC.le hpos (by linarith)
+
+/-- A constant whose multiples by `n + 1` converge is zero. -/
+private theorem existsUnique_globalThetaFourier_const {z w : ℂ}
+    (h : Tendsto (fun n : ℕ ↦ ((n : ℂ) + 1) * z) atTop (𝓝 w)) : z = 0 := by
+  have hinv : Tendsto (fun n : ℕ ↦ ((n : ℂ) + 1)⁻¹) atTop (𝓝 0) := by
+    have := (Complex.continuous_ofReal.tendsto 0).comp tendsto_one_div_add_atTop_nhds_zero_nat
+    simpa [Function.comp_def] using this
+  have hz := h.mul hinv
+  rw [mul_zero] at hz
+  refine tendsto_nhds_unique (tendsto_const_nhds.congr fun n ↦ ?_) hz
+  field_simp [Nat.cast_add_one_ne_zero n]
+
+/-- A test with vanishing theta function vanishes at zero, and so does its Fourier transform.
+By Riemann–Roch the Fourier theta is `a / ‖g‖ - b` with `a`, `b` the two values at zero,
+and theta decays at infinity. -/
+private theorem existsUnique_globalThetaFourier_zero (f : ℬ𝔽) (hf : adelicTheta f = 0) :
+    f (Multiplicative.ofAdd 0) = 0 ∧ adeleSchwartzFourier f (Multiplicative.ofAdd 0) = 0 := by
+  obtain ⟨g, hg⟩ := existsUnique_globalThetaFourier_seq (F := F)
+  set a := f (Multiplicative.ofAdd (0 : 𝔸[F]))
+  set b := adeleSchwartzFourier f (Multiplicative.ofAdd (0 : 𝔸[F]))
+  have hval (n : ℕ) :
+      ((n : ℂ) + 1) * adelicTheta (adeleSchwartzFourier f) (g n) = a - ((n : ℂ) + 1) * b := by
+    have h := adelicTheta_riemannRoch f (g n)⁻¹
+    simp only [hf, ContinuousMap.zero_apply, inv_inv, map_inv, Units.val_inv_eq_inv_val,
+      NNReal.coe_inv, hg, Complex.real_smul] at h
+    push_cast at h
+    linear_combination (-1 : ℂ) * h
+  have ht := existsUnique_globalThetaFourier_tendsto (adeleSchwartzFourier f) g hg
+  simp_rw [hval] at ht
+  have hb : b = 0 := by
+    have h2 : Tendsto (fun n : ℕ ↦ ((n : ℂ) + 1) * (-b)) atTop (𝓝 (0 - a)) :=
+      (ht.sub (tendsto_const_nhds (x := a))).congr fun n ↦ by ring
+    exact neg_eq_zero.mp (existsUnique_globalThetaFourier_const h2)
+  simp only [hb, mul_zero, sub_zero] at ht
+  exact ⟨tendsto_nhds_unique tendsto_const_nhds ht, hb⟩
+
+/-- The adelic Fourier transform preserves the global theta kernel. -/
+private theorem existsUnique_globalThetaFourier_ker (f : ℬ𝔽) (hf : adelicTheta f = 0) :
+    adelicTheta (adeleSchwartzFourier f) = 0 := by
+  obtain ⟨h0, h1⟩ := existsUnique_globalThetaFourier_zero f hf
+  ext g
+  have h := adelicTheta_riemannRoch f g⁻¹
+  have hn : ((ideleClassNorm F g⁻¹ : ℝ≥0) : ℝ)⁻¹ ≠ 0 :=
+    inv_ne_zero (NNReal.coe_ne_zero.mpr (ideleClassNorm F g⁻¹).ne_zero)
+  simp only [hf, ContinuousMap.zero_apply, inv_inv, h0, h1, smul_zero, add_zero,
+    sub_zero] at h
+  exact (smul_eq_zero.mp h.symm).resolve_left hn
+
+/-- The double adelic Fourier transform has the same theta function. Riemann–Roch twice
+shows the two theta functions differ by a constant, and both decay at infinity. -/
+private theorem existsUnique_globalThetaFourier_inv (f : ℬ𝔽) :
+    adelicTheta (adeleSchwartzFourier (adeleSchwartzFourier f)) = adelicTheta f := by
+  set a := f (Multiplicative.ofAdd (0 : 𝔸[F]))
+  set b := adeleSchwartzFourier f (Multiplicative.ofAdd (0 : 𝔸[F]))
+  set c := adeleSchwartzFourier (adeleSchwartzFourier f) (Multiplicative.ofAdd (0 : 𝔸[F]))
+  have hrr (g : IdeleClassGroup (𝓞 F) F) :
+      adelicTheta f g = adelicTheta (adeleSchwartzFourier (adeleSchwartzFourier f)) g + c - a := by
+    have h1 := adelicTheta_riemannRoch f g
+    have h2 := adelicTheta_riemannRoch (adeleSchwartzFourier f) g⁻¹
+    have hn : ((ideleClassNorm F g : ℝ≥0) : ℝ) ≠ 0 := NNReal.coe_ne_zero.mpr (ideleClassNorm F g).ne_zero
+    simp only [inv_inv, map_inv, Units.val_inv_eq_inv_val, NNReal.coe_inv,
+      Complex.real_smul] at h1 h2
+    rw [h1, h2]
+    have hn' : (((ideleClassNorm F g : ℝ≥0) : ℝ) : ℂ) ≠ 0 := Complex.ofReal_ne_zero.mpr hn
+    push_cast
+    field_simp
+    ring
+  obtain ⟨g, hg⟩ := existsUnique_globalThetaFourier_seq (F := F)
+  have hca : c - a = 0 := by
+    refine existsUnique_globalThetaFourier_const (w := 0 - 0) ?_
+    refine ((existsUnique_globalThetaFourier_tendsto f g hg).sub
+      (existsUnique_globalThetaFourier_tendsto
+        (adeleSchwartzFourier (adeleSchwartzFourier f)) g hg)).congr fun n ↦ ?_
+    rw [hrr]
+    ring
+  ext g
+  rw [hrr]
+  linear_combination -hca
+
 /-- Paper: Theorem 5.2.4.1(2), p. 239.
 Adelic Fourier transform descends to a unique continuous linear involution
 on the global theta quotient.
@@ -2308,8 +2469,32 @@ Deviation: The descent identity is tested on global test functions, as in the pr
 theorem existsUnique_globalThetaFourier :
     ∃! e : Θ𝔽 ≃L[ℂ] Θ𝔽,
       Involutive e ∧ ∀ f : ℬ𝔽,
-        e ((K𝔽).mkQ f) = (K𝔽).mkQ (adeleSchwartzFourier (F := F) f) :=
-  by sorry
+        e ((K𝔽).mkQ f) = (K𝔽).mkQ (adeleSchwartzFourier (F := F) f) := by
+  obtain ⟨P, hP⟩ := existsUnique_globalThetaFourier_clm (F := F)
+  have hK : K𝔽 ≤ (K𝔽).comap P.toLinearMap := fun f hf ↦ by
+    rw [Submodule.mem_comap, LinearMap.mem_ker, ContinuousLinearMap.coe_coe, hP]
+    exact existsUnique_globalThetaFourier_ker f (LinearMap.mem_ker.mp hf)
+  let E₀ : Θ𝔽 →ₗ[ℂ] Θ𝔽 := (K𝔽).mapQ K𝔽 P.toLinearMap hK
+  have hE₀ (f : ℬ𝔽) : E₀ ((K𝔽).mkQ f) = (K𝔽).mkQ (adeleSchwartzFourier f) := by
+    rw [← hP]
+    rfl
+  have hcont : Continuous E₀ := by
+    refine (K𝔽).isQuotientMap_mkQ.continuous_iff.mpr ?_
+    have : (E₀ ∘ (K𝔽).mkQ) = (K𝔽).mkQ ∘ P := funext fun f ↦ (hE₀ f).trans (by simp only [Function.comp_apply, hP])
+    rw [this]
+    exact (K𝔽).isQuotientMap_mkQ.continuous.comp P.continuous
+  let E : Θ𝔽 →L[ℂ] Θ𝔽 := ⟨E₀, hcont⟩
+  have hEE (x : Θ𝔽) : E (E x) = x := by
+    obtain ⟨f, rfl⟩ := (K𝔽).mkQ_surjective x
+    change E₀ (E₀ _) = _
+    rw [hE₀, hE₀]
+    exact (globalAdelicThetaSpace_mk_eq_iff _ _).mpr (existsUnique_globalThetaFourier_inv f)
+  refine ⟨ContinuousLinearEquiv.equivOfInverse E E hEE hEE, ⟨hEE, hE₀⟩, ?_⟩
+  rintro e' ⟨-, he'⟩
+  ext x
+  obtain ⟨f, rfl⟩ := (K𝔽).mkQ_surjective x
+  exact (he' f).trans (hE₀ f).symm
+
 
 -- TODO(paper-gap): The unrestricted compatibility assertions on p. 239 fail.
 -- For ℚ(i) above 2 the Fourier image of the integer indicator is half the inverse-
